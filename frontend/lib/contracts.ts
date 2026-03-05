@@ -1,9 +1,11 @@
 export const GNARS_SWAP_ADDRESS = {
   [84532]: "0x78CD86E78B2fEa4919a8805B8FFe09E3BD1dbfA2", // Base Sepolia
+  [8453]: "0x7B1810bFc8Cc065911f1AAFEb8B42190e238380A",  // Base mainnet
 } as Record<number, `0x${string}`>;
 
 export const GNARS_NFT_ADDRESS = {
   [84532]: "0xcaBa79dFa3887705bF1A7A880DEe0888470CBF53", // Base Sepolia (MockERC721)
+  [8453]: "0x880fb3cf5c6cc2d7dfc13a993e839a9411200c17",  // Base mainnet (Gnars)
 } as Record<number, `0x${string}`>;
 
 export const GNARS_SWAP_ABI = [
