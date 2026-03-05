@@ -354,60 +354,73 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
       </div>
 
       {/* Controls bar — spans full width */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] border-b border-border shrink-0">
-        {/* LEFT controls: your wallet */}
-        <div className="p-3">
-          <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Your wallet
-          </label>
-          <div className="mt-1 h-7 flex items-center gap-2 border border-border bg-background px-2 text-xs font-mono truncate">
-            <AddressAvatar ensAvatar={myEnsAvatar} address={address} size={16} />
-            <span className="truncate">
-              {myEnsName ?? address}
-            </span>
-          </div>
-          {myEnsName && (
-            <p className="mt-1 text-[10px] font-mono text-muted-foreground">
-              {`${address!.slice(0, 6)}...${address!.slice(-4)}`}
+      <div className="grid grid-cols-[1fr_40px_1fr] border-b border-border shrink-0">
+        {/* LEFT: your identity */}
+        <div className="p-3 flex items-center gap-2.5 min-w-0">
+          <AddressAvatar ensAvatar={myEnsAvatar} address={address} size={32} />
+          <div className="min-w-0">
+            <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground mb-0.5">You</p>
+            <p className="text-xs font-mono font-semibold truncate leading-tight">
+              {myEnsName ?? `${address!.slice(0, 6)}…${address!.slice(-4)}`}
             </p>
-          )}
+            {myEnsName && (
+              <p className="text-[10px] font-mono text-muted-foreground/60 leading-tight">
+                {`${address!.slice(0, 6)}…${address!.slice(-4)}`}
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Center spacer */}
-        <div className="hidden md:flex items-center">
-          <Separator orientation="vertical" className="h-full" />
+        {/* Center: ⇄ */}
+        <div className="flex items-center justify-center border-x border-border">
+          <span className="text-sm text-muted-foreground select-none">⇄</span>
         </div>
-        <Separator className="md:hidden" />
 
-        {/* RIGHT controls: counterparty selector */}
-        <div className="p-3">
-          <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Trade with
-          </label>
-          <Input
-            type="text"
-            placeholder="0x... or name.eth"
-            value={addressInput}
-            onChange={(e) => {
-              setAddressInput(e.target.value);
-              setSelectedTheirToken(undefined);
-            }}
-            className="mt-1 h-7 text-xs font-mono"
-            disabled={busy}
-          />
-          {isEnsName && (
-            <div className="mt-1 flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
-              {ensLoading ? (
-                "Resolving..."
-              ) : ensAddress ? (
-                <>
-                  <AddressAvatar ensAvatar={counterpartyEnsAvatar} address={ensAddress} size={12} />
-                  <span>{`→ ${ensAddress.slice(0, 6)}...${ensAddress.slice(-4)}`}</span>
-                </>
-              ) : (
-                "Could not resolve ENS name"
+        {/* RIGHT: counterparty — card when resolved, input otherwise */}
+        <div className="p-3 flex items-center gap-2.5 min-w-0">
+          {counterpartyValid ? (
+            <>
+              <AddressAvatar ensAvatar={counterpartyEnsAvatar} address={counterparty} size={32} />
+              <div className="min-w-0 flex-1">
+                <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground mb-0.5">Trade With</p>
+                <p className="text-xs font-mono font-semibold truncate leading-tight">
+                  {counterpartyEnsName ?? `${counterparty.slice(0, 6)}…${counterparty.slice(-4)}`}
+                </p>
+                {counterpartyEnsName && (
+                  <p className="text-[10px] font-mono text-muted-foreground/60 leading-tight">
+                    {ensLoading ? "…" : `${counterparty.slice(0, 6)}…${counterparty.slice(-4)}`}
+                  </p>
+                )}
+              </div>
+              {!busy && (
+                <button
+                  type="button"
+                  className="shrink-0 text-muted-foreground/50 hover:text-muted-foreground text-base leading-none"
+                  onClick={() => { setAddressInput(""); setSelectedTheirToken(undefined); }}
+                  title="Change"
+                >
+                  ×
+                </button>
               )}
-            </div>
+            </>
+          ) : (
+            <>
+              <AddressAvatar ensAvatar={counterpartyEnsAvatar} address={ensAddress ?? undefined} size={32} />
+              <div className="min-w-0 flex-1">
+                <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground mb-0.5">Trade With</p>
+                <Input
+                  type="text"
+                  placeholder="0x… or name.eth"
+                  value={addressInput}
+                  onChange={(e) => {
+                    setAddressInput(e.target.value);
+                    setSelectedTheirToken(undefined);
+                  }}
+                  className="h-6 text-xs font-mono w-full"
+                  disabled={busy}
+                />
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -415,7 +428,7 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
       {/* Two-panel layout */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] flex-1 min-h-0">
         {/* LEFT: Your inventory */}
-        <div className="p-3">
+        <div className="min-h-0">
           <InventoryGrid
             tokens={myTokens}
             selectedToken={selectedMyToken}
@@ -428,8 +441,6 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
                     )
             }
             isLoading={myLoading}
-            label="Your Inventory"
-            sublabel={`${address.slice(0, 6)}...${address.slice(-4)}`}
           />
         </div>
 
@@ -440,7 +451,7 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
         <Separator className="md:hidden" />
 
         {/* RIGHT: Their inventory */}
-        <div className="p-3">
+        <div className="min-h-0">
           {counterpartyValid ? (
             <InventoryGrid
               tokens={theirTokens}
@@ -454,27 +465,17 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
                       )
               }
               isLoading={theirLoading}
-              label="Their Inventory"
-              sublabel={isEnsName ? addressInput : `${counterparty.slice(0, 6)}...${counterparty.slice(-4)}`}
             />
           ) : (
-            <div className="flex flex-col gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-0.5">
-                Their Inventory
-              </span>
-              <div className="border border-dashed border-border/50 p-1">
-                <div className="grid grid-cols-4 gap-px">
-                  {Array.from({ length: 16 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="aspect-square border border-border/20 bg-muted/20"
-                    />
-                  ))}
-                </div>
+            <div className="border border-dashed border-border/50 p-1">
+              <div className="grid grid-cols-4 gap-px">
+                {Array.from({ length: 16 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="aspect-square border border-border/20 bg-muted/20"
+                  />
+                ))}
               </div>
-              <span className="px-0.5 text-[10px] text-muted-foreground/40">
-                Enter a holder address to see their items
-              </span>
             </div>
           )}
         </div>
@@ -532,7 +533,8 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
                 placeholder="0.00"
                 value={ethSweetener}
                 onChange={(e) => setEthSweetener(e.target.value)}
-                className="h-5 w-16 text-xs border-0 bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="h-5 text-xs border-0 bg-transparent px-1 py-0 focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                style={{ width: `calc(${Math.max(4, (ethSweetener || "").length || 4)}ch + 0.5rem)` }}
                 disabled={busy}
               />
             </div>
