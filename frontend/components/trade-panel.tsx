@@ -56,6 +56,7 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
     counterpartyValid ? counterparty : undefined
   );
 
+
   // Approval check
   const { data: approvedAddress, refetch: refetchApproval } = useReadContract({
     address: nftAddress,
@@ -258,9 +259,9 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
   };
 
   return (
-    <div className="border border-border bg-card/50">
+    <div className="border border-border bg-card/50 flex-1 min-h-0 flex flex-col">
       {/* Title bar */}
-      <div className="flex items-center justify-between border-b border-border bg-muted/30 px-3 py-1.5">
+      <div className="flex items-center justify-between border-b border-border bg-muted/30 px-3 py-1.5 shrink-0">
         <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
           Trade Window
         </span>
@@ -281,7 +282,7 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
       </div>
 
       {/* Two-panel layout */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr]">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] flex-1 min-h-0">
         {/* LEFT: Your inventory */}
         <div className="p-3">
           <InventoryGrid
@@ -384,7 +385,7 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
       </div>
 
       {/* Offer summary + action bar */}
-      <div className="border-t border-border bg-muted/30 px-3 py-2">
+      <div className="border-t border-border bg-muted/30 px-3 py-2 shrink-0">
         <div className="flex items-center justify-between gap-4">
           {/* Summary */}
           <div className="flex items-center gap-3 text-xs text-muted-foreground min-w-0">

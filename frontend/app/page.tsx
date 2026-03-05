@@ -59,8 +59,8 @@ export default function Page() {
   const { myProposals, incoming, history, isLoading, markSwap, addSwap, syncFromChain, totalSwaps } = useSwaps();
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-3xl flex-col px-4 py-6">
-      <header className="flex items-center justify-between">
+    <div className="mx-auto flex min-h-dvh md:h-dvh max-w-3xl flex-col px-4 py-6">
+      <header className="flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-lg font-bold tracking-tight">GnarsSwap</h1>
           <p className="text-xs text-muted-foreground">
@@ -70,8 +70,8 @@ export default function Page() {
         <ConnectButton />
       </header>
 
-      <main className="mt-6 flex-1">
-        <Tabs defaultValue="trade">
+      <main className="mt-6 flex-1 min-h-0 flex flex-col">
+        <Tabs defaultValue="trade" className="flex-1 min-h-0 flex flex-col">
           <TabsList variant="line">
             <TabsTrigger value="trade">New Trade</TabsTrigger>
             <TabsTrigger value="inbox">
@@ -86,8 +86,8 @@ export default function Page() {
             <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
 
-          <div className="mt-4">
-            <TabsContent value="trade">
+          <div className="mt-4 flex-1 min-h-0 flex flex-col">
+            <TabsContent value="trade" className="min-h-0">
               <TradePanel
                 onTradeComplete={(swap) => {
                   addSwap(swap);
@@ -140,7 +140,7 @@ export default function Page() {
         </Tabs>
       </main>
 
-      <footer className="mt-8 border-t pt-4 text-center text-xs text-muted-foreground">
+      <footer className="mt-8 border-t pt-4 text-center text-xs text-muted-foreground shrink-0">
         Gnars on Base
       </footer>
     </div>

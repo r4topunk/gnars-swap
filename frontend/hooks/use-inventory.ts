@@ -4,8 +4,17 @@ import { useEffect, useState, useCallback } from "react";
 import { useAccount } from "wagmi";
 import { GNARS_NFT_ADDRESS } from "@/lib/contracts";
 
+export interface NftToken {
+  id: number;
+  imageUrl?: string;
+}
+
 interface AlchemyNft {
   tokenId: string;
+  image?: {
+    thumbnailUrl?: string;
+    originalUrl?: string;
+  };
 }
 
 interface AlchemyResponse {
@@ -19,19 +28,19 @@ async function fetchNFTsFromAlchemy(
   chainId: number,
   owner: string,
   contractAddress: string
-): Promise<number[]> {
+): Promise<NftToken[]> {
   const base = chainId === 84532
     ? "https://base-sepolia.g.alchemy.com"
     : "https://base-mainnet.g.alchemy.com";
 
-  const tokens: number[] = [];
+  const tokens: NftToken[] = [];
   let pageKey: string | undefined;
 
   do {
     const url = new URL(`${base}/nft/v3/${apiKey}/getNFTsForOwner`);
     url.searchParams.set("owner", owner);
     url.searchParams.append("contractAddresses[]", contractAddress);
-    url.searchParams.set("withMetadata", "false");
+    url.searchParams.set("withMetadata", "true");
     url.searchParams.set("limit", "100");
     if (pageKey) url.searchParams.set("pageKey", pageKey);
 
@@ -40,19 +49,22 @@ async function fetchNFTsFromAlchemy(
 
     const data: AlchemyResponse = await res.json();
     for (const nft of data.ownedNfts) {
-      tokens.push(Number(nft.tokenId));
+      tokens.push({
+        id: Number(nft.tokenId),
+        imageUrl: nft.image?.thumbnailUrl ?? nft.image?.originalUrl,
+      });
     }
     pageKey = data.pageKey;
   } while (pageKey);
 
-  return tokens.sort((a, b) => a - b);
+  return tokens.sort((a, b) => a.id - b.id);
 }
 
 export function useInventory(ownerAddress?: string) {
   const { chainId } = useAccount();
   const nftAddress = chainId ? GNARS_NFT_ADDRESS[chainId] : undefined;
 
-  const [tokens, setTokens] = useState<number[]>([]);
+  const [tokens, setTokens] = useState<NftToken[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [fetchTrigger, setFetchTrigger] = useState(0);
 

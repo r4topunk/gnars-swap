@@ -2,11 +2,12 @@
 
 import { NftCard } from "@/components/nft-card";
 import { cn } from "@/lib/utils";
+import type { NftToken } from "@/hooks/use-inventory";
 
 const GRID_SLOTS = 16; // 4x4 grid
 
 interface InventoryGridProps {
-  tokens: number[];
+  tokens: NftToken[];
   selectedToken?: number;
   onSelect?: (tokenId: number) => void;
   isLoading?: boolean;
@@ -25,7 +26,7 @@ export function InventoryGrid({
   className,
 }: InventoryGridProps) {
   // Fill remaining slots as empty
-  const slots: (number | null)[] = [
+  const slots: (NftToken | null)[] = [
     ...tokens,
     ...Array(Math.max(0, GRID_SLOTS - tokens.length)).fill(null),
   ];
@@ -45,7 +46,7 @@ export function InventoryGrid({
       </div>
 
       {/* Grid container — game inventory style */}
-      <div className="border border-border bg-background/50 p-1">
+      <div className="border border-border bg-background/50 p-1 overflow-y-auto max-h-[40vh]">
         {isLoading ? (
           <div className="grid grid-cols-4 gap-px">
             {Array.from({ length: GRID_SLOTS }).map((_, i) => (
@@ -57,15 +58,16 @@ export function InventoryGrid({
           </div>
         ) : (
           <div className="grid grid-cols-4 gap-px">
-            {slots.map((tokenId, i) => (
+            {slots.map((token, i) => (
               <NftCard
-                key={tokenId !== null ? `t-${tokenId}` : `e-${i}`}
-                tokenId={tokenId ?? undefined}
-                empty={tokenId === null}
-                selected={tokenId !== null && tokenId === selectedToken}
+                key={token !== null ? `t-${token.id}` : `e-${i}`}
+                tokenId={token?.id}
+                imageUrl={token?.imageUrl}
+                empty={token === null}
+                selected={token !== null && token.id === selectedToken}
                 onClick={
-                  tokenId !== null && onSelect
-                    ? () => onSelect(tokenId)
+                  token !== null && onSelect
+                    ? () => onSelect(token.id)
                     : undefined
                 }
               />
