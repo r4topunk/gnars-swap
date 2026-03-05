@@ -28,7 +28,7 @@ export function InventoryGrid({
   ];
 
   return (
-    <div className={cn("border border-border bg-background/50 p-1 overflow-y-auto max-h-[40vh]", className)}>
+    <div className={cn("border border-border bg-background/50 p-1 overflow-y-auto h-full", className)}>
       {isLoading ? (
         <div className="grid grid-cols-4 gap-px">
           {Array.from({ length: GRID_SLOTS }).map((_, i) => (

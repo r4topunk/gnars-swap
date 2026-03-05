@@ -467,7 +467,7 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
               isLoading={theirLoading}
             />
           ) : (
-            <div className="border border-dashed border-border/50 p-1">
+            <div className="border border-dashed border-border/50 p-1 h-full overflow-y-auto">
               <div className="grid grid-cols-4 gap-px">
                 {Array.from({ length: 16 }).map((_, i) => (
                   <div

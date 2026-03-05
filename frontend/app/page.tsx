@@ -87,7 +87,7 @@ export default function Page() {
           </TabsList>
 
           <div className="mt-4 flex-1 min-h-0 flex flex-col">
-            <TabsContent value="trade" className="min-h-0">
+            <TabsContent value="trade" className="min-h-0 flex flex-col">
               <TradePanel
                 onTradeComplete={(swap) => {
                   addSwap(swap);
@@ -140,7 +140,7 @@ export default function Page() {
         </Tabs>
       </main>
 
-      <footer className="mt-8 border-t pt-4 text-center text-xs text-muted-foreground shrink-0">
+      <footer className="mt-4 border-t pt-3 text-center text-xs text-muted-foreground shrink-0">
         Gnars on Base
       </footer>
     </div>
