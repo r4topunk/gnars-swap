@@ -1,6 +1,6 @@
 "use client";
 
-import { useAccount, useReadContract } from "wagmi";
+import { useAccount, usePublicClient, useReadContract } from "wagmi";
 import { useEffect, useState, useCallback } from "react";
 import { GNARS_SWAP_ABI, GNARS_SWAP_ADDRESS } from "@/lib/contracts";
 
@@ -16,6 +16,7 @@ export interface SwapData {
 
 export function useSwaps() {
   const { address, chainId } = useAccount();
+  const publicClient = usePublicClient();
   const swapAddress = chainId ? GNARS_SWAP_ADDRESS[chainId] : undefined;
 
   const { data: nextSwapId, refetch: refetchNextId } = useReadContract({
@@ -34,51 +35,46 @@ export function useSwaps() {
 
   const totalSwaps = nextSwapId ? Number(nextSwapId) : 0;
 
-  // Optimistic update — instantly change a swap's status in local state
   const markSwap = useCallback((swapId: number, newStatus: number) => {
     setSwaps((prev) =>
       prev.map((s) => (s.swapId === swapId ? { ...s, status: newStatus } : s))
     );
   }, []);
 
-  // Add a new swap optimistically (after propose)
   const addSwap = useCallback((swap: SwapData) => {
     setSwaps((prev) => [...prev, swap]);
   }, []);
 
-  // Background sync — doesn't reset loading state, merges silently
   const syncFromChain = useCallback(() => {
     refetchNextId();
     setFetchTrigger((n) => n + 1);
   }, [refetchNextId]);
 
   useEffect(() => {
-    if (!swapAddress || totalSwaps === 0 || !chainId) {
+    if (!swapAddress || totalSwaps === 0 || !publicClient) {
       setSwaps([]);
       return;
     }
 
     let cancelled = false;
-    // Only show loading skeleton on first load, not background syncs
     if (swaps.length === 0) setIsLoading(true);
 
     async function fetchSwaps() {
-      const { createPublicClient, http } = await import("viem");
-      const { baseSepolia, base } = await import("viem/chains");
+      const contracts = Array.from({ length: totalSwaps }, (_, i) => ({
+        address: swapAddress as `0x${string}`,
+        abi: GNARS_SWAP_ABI,
+        functionName: "getSwap" as const,
+        args: [BigInt(i)] as const,
+      }));
 
-      const chain = chainId === 84532 ? baseSepolia : base;
-      const client = createPublicClient({ chain, transport: http() });
+      const results = await publicClient!.multicall({ contracts });
 
-      const results: SwapData[] = [];
-      for (let i = 0; i < totalSwaps; i++) {
-        try {
-          const data = await client.readContract({
-            address: swapAddress!,
-            abi: GNARS_SWAP_ABI,
-            functionName: "getSwap",
-            args: [BigInt(i)],
-          });
-          results.push({
+      const parsed: SwapData[] = [];
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i];
+        if (r.status === "success") {
+          const data = r.result;
+          parsed.push({
             swapId: i,
             proposer: data.proposer,
             counterparty: data.counterparty,
@@ -87,23 +83,21 @@ export function useSwaps() {
             ethAmount: data.ethAmount,
             status: data.status,
           });
-        } catch {
-          // skip invalid swaps
         }
       }
 
       if (!cancelled) {
-        setSwaps(results);
+        setSwaps(parsed);
         setIsLoading(false);
       }
     }
 
-    fetchSwaps();
+    fetchSwaps().catch(console.error);
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [swapAddress, totalSwaps, chainId, fetchTrigger]);
+  }, [swapAddress, totalSwaps, publicClient, fetchTrigger]);
 
   const myProposals = swaps.filter(
     (s) => s.proposer.toLowerCase() === address?.toLowerCase()

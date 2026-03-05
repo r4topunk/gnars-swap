@@ -2,7 +2,51 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useAccount } from "wagmi";
-import { GNARS_NFT_ADDRESS, ERC721_ABI } from "@/lib/contracts";
+import { GNARS_NFT_ADDRESS } from "@/lib/contracts";
+
+interface AlchemyNft {
+  tokenId: string;
+}
+
+interface AlchemyResponse {
+  ownedNfts: AlchemyNft[];
+  pageKey?: string;
+  totalCount: number;
+}
+
+async function fetchNFTsFromAlchemy(
+  apiKey: string,
+  chainId: number,
+  owner: string,
+  contractAddress: string
+): Promise<number[]> {
+  const base = chainId === 84532
+    ? "https://base-sepolia.g.alchemy.com"
+    : "https://base-mainnet.g.alchemy.com";
+
+  const tokens: number[] = [];
+  let pageKey: string | undefined;
+
+  do {
+    const url = new URL(`${base}/nft/v3/${apiKey}/getNFTsForOwner`);
+    url.searchParams.set("owner", owner);
+    url.searchParams.append("contractAddresses[]", contractAddress);
+    url.searchParams.set("withMetadata", "false");
+    url.searchParams.set("limit", "100");
+    if (pageKey) url.searchParams.set("pageKey", pageKey);
+
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error(`Alchemy NFT API error: ${res.status}`);
+
+    const data: AlchemyResponse = await res.json();
+    for (const nft of data.ownedNfts) {
+      tokens.push(Number(nft.tokenId));
+    }
+    pageKey = data.pageKey;
+  } while (pageKey);
+
+  return tokens.sort((a, b) => a - b);
+}
 
 export function useInventory(ownerAddress?: string) {
   const { chainId } = useAccount();
@@ -12,14 +56,13 @@ export function useInventory(ownerAddress?: string) {
   const [isLoading, setIsLoading] = useState(false);
   const [fetchTrigger, setFetchTrigger] = useState(0);
 
-  const target = ownerAddress?.toLowerCase();
-
   const refetch = useCallback(() => {
     setFetchTrigger((n) => n + 1);
   }, []);
 
   useEffect(() => {
-    if (!nftAddress || !target || !chainId) {
+    const apiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
+    if (!nftAddress || !ownerAddress || !chainId || !apiKey) {
       setTokens([]);
       return;
     }
@@ -27,73 +70,19 @@ export function useInventory(ownerAddress?: string) {
     let cancelled = false;
     setIsLoading(true);
 
-    async function scan() {
-      const { createPublicClient, http } = await import("viem");
-      const { baseSepolia, base } = await import("viem/chains");
+    fetchNFTsFromAlchemy(apiKey, chainId, ownerAddress, nftAddress)
+      .then((found) => {
+        if (!cancelled) setTokens(found);
+      })
+      .catch(console.error)
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
 
-      const chain = chainId === 84532 ? baseSepolia : base;
-      const client = createPublicClient({ chain, transport: http() });
-
-      let balance = 0;
-      try {
-        const bal = await client.readContract({
-          address: nftAddress!,
-          abi: ERC721_ABI,
-          functionName: "balanceOf",
-          args: [target as `0x${string}`],
-        });
-        balance = Number(bal);
-      } catch {
-        // fallback: scan anyway
-      }
-
-      if (balance === 0) {
-        if (!cancelled) {
-          setTokens([]);
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      const found: number[] = [];
-      const SCAN_MAX = 100;
-      const batchSize = 10;
-
-      for (let start = 0; start < SCAN_MAX && found.length < balance; start += batchSize) {
-        const promises = [];
-        for (let i = start; i < start + batchSize && i < SCAN_MAX; i++) {
-          promises.push(
-            client
-              .readContract({
-                address: nftAddress!,
-                abi: ERC721_ABI,
-                functionName: "ownerOf",
-                args: [BigInt(i)],
-              })
-              .then((owner) => {
-                if ((owner as string).toLowerCase() === target) return i;
-                return null;
-              })
-              .catch(() => null)
-          );
-        }
-        const results = await Promise.all(promises);
-        for (const r of results) {
-          if (r !== null) found.push(r);
-        }
-      }
-
-      if (!cancelled) {
-        setTokens(found.sort((a, b) => a - b));
-        setIsLoading(false);
-      }
-    }
-
-    scan();
     return () => {
       cancelled = true;
     };
-  }, [nftAddress, target, chainId, fetchTrigger]);
+  }, [nftAddress, ownerAddress, chainId, fetchTrigger]);
 
   return { tokens, isLoading, refetch };
 }
