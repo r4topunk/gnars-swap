@@ -7,7 +7,9 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
   usePublicClient,
+  useEnsAddress,
 } from "wagmi";
+import { mainnet } from "wagmi/chains";
 import { parseEther } from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,7 +42,7 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
   const [selectedTheirToken, setSelectedTheirToken] = useState<
     number | undefined
   >();
-  const [counterparty, setCounterparty] = useState("");
+  const [addressInput, setAddressInput] = useState("");
   const [ethSweetener, setEthSweetener] = useState("");
   const [status, setStatus] = useState<TradeStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -48,10 +50,23 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
   const swapAddress = chainId ? GNARS_SWAP_ADDRESS[chainId] : undefined;
   const nftAddress = chainId ? GNARS_NFT_ADDRESS[chainId] : undefined;
 
+  // ENS resolution
+  const isEnsName = addressInput.toLowerCase().endsWith(".eth") && addressInput.length > 4;
+  const isRawAddress = addressInput.length === 42 && addressInput.startsWith("0x");
+  const { data: ensAddress, isLoading: ensLoading } = useEnsAddress({
+    name: isEnsName ? addressInput : undefined,
+    chainId: mainnet.id,
+    query: { enabled: isEnsName },
+  });
+  const counterparty = isEnsName
+    ? (ensAddress ?? "")
+    : isRawAddress
+    ? addressInput
+    : "";
+  const counterpartyValid = counterparty.length === 42 && counterparty.startsWith("0x");
+
   // Fetch inventories
   const { tokens: myTokens, isLoading: myLoading, refetch: refetchMyInventory } = useInventory(address);
-  const counterpartyValid =
-    counterparty.length === 42 && counterparty.startsWith("0x");
   const { tokens: theirTokens, isLoading: theirLoading } = useInventory(
     counterpartyValid ? counterparty : undefined
   );
@@ -212,7 +227,7 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
   function handleReset() {
     setSelectedMyToken(undefined);
     setSelectedTheirToken(undefined);
-    setCounterparty("");
+    setAddressInput("");
     setEthSweetener("");
     setStatus("idle");
     setErrorMsg("");
@@ -281,6 +296,56 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
         </div>
       </div>
 
+      {/* Controls bar — spans full width */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] border-b border-border shrink-0">
+        {/* LEFT controls: your wallet */}
+        <div className="p-3">
+          <div className="border border-border bg-background/50 p-2">
+            <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Your wallet
+            </label>
+            <div className="mt-1 h-7 flex items-center text-xs font-mono text-muted-foreground/80 px-1 truncate">
+              {address}
+            </div>
+          </div>
+        </div>
+
+        {/* Center spacer */}
+        <div className="hidden md:flex items-center">
+          <Separator orientation="vertical" className="h-full" />
+        </div>
+        <Separator className="md:hidden" />
+
+        {/* RIGHT controls: counterparty selector */}
+        <div className="p-3">
+          <div className="border border-border bg-background/50 p-2">
+            <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Trade with
+            </label>
+            <Input
+              type="text"
+              placeholder="0x... or name.eth"
+              value={addressInput}
+              onChange={(e) => {
+                setAddressInput(e.target.value);
+                setSelectedTheirToken(undefined);
+              }}
+              className="mt-1 h-7 text-xs font-mono"
+              disabled={busy}
+            />
+            {isEnsName && (
+              <p className="mt-1 text-[10px] font-mono text-muted-foreground">
+                {ensLoading
+                  ? "Resolving..."
+                  : ensAddress
+                  ? `→ ${ensAddress.slice(0, 6)}...${ensAddress.slice(-4)}`
+                  : "Could not resolve ENS name"}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Two-panel layout */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] flex-1 min-h-0">
         {/* LEFT: Your inventory */}
@@ -300,23 +365,6 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
             label="Your Inventory"
             sublabel={`${address.slice(0, 6)}...${address.slice(-4)}`}
           />
-
-          {/* ETH sweetener */}
-          <div className="mt-3 border border-border bg-background/50 p-2">
-            <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              + ETH sweetener
-            </label>
-            <Input
-              type="number"
-              step="0.01"
-              min={0}
-              placeholder="0.00"
-              value={ethSweetener}
-              onChange={(e) => setEthSweetener(e.target.value)}
-              className="mt-1 h-7 text-xs"
-              disabled={busy}
-            />
-          </div>
         </div>
 
         {/* Center divider */}
@@ -327,24 +375,6 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
 
         {/* RIGHT: Their inventory */}
         <div className="p-3">
-          {/* Counterparty selector */}
-          <div className="mb-3 border border-border bg-background/50 p-2">
-            <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Trade with
-            </label>
-            <Input
-              type="text"
-              placeholder="0x... holder address"
-              value={counterparty}
-              onChange={(e) => {
-                setCounterparty(e.target.value);
-                setSelectedTheirToken(undefined);
-              }}
-              className="mt-1 h-7 text-xs font-mono"
-              disabled={busy}
-            />
-          </div>
-
           {counterpartyValid ? (
             <InventoryGrid
               tokens={theirTokens}
@@ -359,7 +389,7 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
               }
               isLoading={theirLoading}
               label="Their Inventory"
-              sublabel={`${counterparty.slice(0, 6)}...${counterparty.slice(-4)}`}
+              sublabel={isEnsName ? addressInput : `${counterparty.slice(0, 6)}...${counterparty.slice(-4)}`}
             />
           ) : (
             <div className="flex flex-col gap-2">
@@ -424,7 +454,7 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {(selectedMyToken !== undefined ||
               selectedTheirToken !== undefined ||
               status === "error") && (
@@ -437,6 +467,21 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
                 Clear
               </Button>
             )}
+            <div className="flex items-center border border-border bg-background/50 h-8 px-2 gap-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground whitespace-nowrap">
+                + ETH
+              </span>
+              <Input
+                type="number"
+                step="0.01"
+                min={0}
+                placeholder="0.00"
+                value={ethSweetener}
+                onChange={(e) => setEthSweetener(e.target.value)}
+                className="h-5 w-16 text-xs border-0 bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                disabled={busy}
+              />
+            </div>
             <Button
               size="sm"
               disabled={!canPropose || busy}

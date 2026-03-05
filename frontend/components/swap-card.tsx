@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useAccount, useWriteContract, useReadContract, usePublicClient } from "wagmi";
+import { useAccount, useWriteContract, useReadContract, usePublicClient, useEnsName } from "wagmi";
+import { mainnet } from "wagmi/chains";
 import { formatEther } from "viem";
 import {
   Card,
@@ -42,6 +43,18 @@ const STEP_TEXT: Record<CardStatus, string> = {
   "waiting-cancel": "Confirming cancel...",
   error: "",
 };
+
+function AddressDisplay({ address }: { address: string }) {
+  const { data: ensName } = useEnsName({
+    address: address as `0x${string}`,
+    chainId: mainnet.id,
+  });
+  return (
+    <span className="font-mono">
+      {ensName ?? `${address.slice(0, 6)}...${address.slice(-4)}`}
+    </span>
+  );
+}
 
 function TokenBadge({ tokenId, label }: { tokenId: bigint; label: string }) {
   return (
@@ -193,10 +206,10 @@ export function SwapCard({
         </div>
         <div className="mt-3 space-y-1 text-xs text-muted-foreground">
           <div>
-            From: <span className="font-mono">{swap.proposer.slice(0, 6)}...{swap.proposer.slice(-4)}</span>
+            From: <AddressDisplay address={swap.proposer} />
           </div>
           <div>
-            To: <span className="font-mono">{swap.counterparty.slice(0, 6)}...{swap.counterparty.slice(-4)}</span>
+            To: <AddressDisplay address={swap.counterparty} />
           </div>
         </div>
       </CardContent>
