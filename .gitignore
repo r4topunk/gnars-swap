@@ -1,7 +1,25 @@
+# Dependencies
 node_modules
+
+# Environment
 .env
+.env.local
+.env.*.local
+
+# Hardhat
 cache
 artifacts
 typechain-types
 coverage
 coverage.json
+
+# Frontend
+frontend/.next
+frontend/node_modules
+
+# OS
+.DS_Store
+
+# IDE
+.vscode
+.idea
