@@ -23,7 +23,7 @@ export function NftCard({ tokenId, imageUrl, selected, onClick, empty }: NftCard
           ? "border-border/30 bg-card/30"
           : "border-border bg-card hover:bg-accent",
         selected &&
-          "border-primary ring-1 ring-primary shadow-[0_0_8px_-2px] shadow-primary/40",
+          "border-yellow-400 ring-1 ring-yellow-400 shadow-[0_0_8px_-2px] shadow-yellow-400/40",
         onClick && !empty && "cursor-pointer active:scale-95",
         !onClick && "cursor-default"
       )}
@@ -38,7 +38,7 @@ export function NftCard({ tokenId, imageUrl, selected, onClick, empty }: NftCard
             loading="lazy"
           />
           {selected && (
-            <div className="absolute inset-0 bg-primary/20 ring-inset ring-1 ring-primary" />
+            <div className="absolute inset-0 bg-yellow-400/20 ring-inset ring-1 ring-yellow-400" />
           )}
           <span className="absolute bottom-0 left-0 right-0 bg-background/70 px-1 py-0.5 text-center font-mono text-[9px] font-bold tabular-nums leading-tight text-foreground">
             #{tokenId}
@@ -48,7 +48,7 @@ export function NftCard({ tokenId, imageUrl, selected, onClick, empty }: NftCard
         <span
           className={cn(
             "font-mono text-sm font-bold tabular-nums",
-            selected ? "text-primary" : "text-foreground"
+            selected ? "text-yellow-400" : "text-foreground"
           )}
         >
           #{tokenId}
