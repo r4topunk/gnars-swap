@@ -8,6 +8,8 @@ import {
   useWaitForTransactionReceipt,
   usePublicClient,
   useEnsAddress,
+  useEnsName,
+  useEnsAvatar,
 } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { parseEther } from "viem";
@@ -24,6 +26,31 @@ import {
   GNARS_NFT_ADDRESS,
 } from "@/lib/contracts";
 import type { SwapData } from "@/hooks/use-swaps";
+
+function addressToColor(addr: string): string {
+  const hex = addr.slice(2, 8);
+  return `#${hex}`;
+}
+
+function AddressAvatar({ ensAvatar, address, size = 20 }: { ensAvatar?: string | null; address?: string; size?: number }) {
+  if (ensAvatar) {
+    return (
+      <img
+        src={ensAvatar}
+        alt=""
+        className="rounded-full shrink-0"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  const bg = address ? addressToColor(address) : "#666";
+  return (
+    <div
+      className="rounded-full shrink-0"
+      style={{ width: size, height: size, backgroundColor: bg }}
+    />
+  );
+}
 
 type TradeStatus =
   | "idle"
@@ -50,7 +77,19 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
   const swapAddress = chainId ? GNARS_SWAP_ADDRESS[chainId] : undefined;
   const nftAddress = chainId ? GNARS_NFT_ADDRESS[chainId] : undefined;
 
-  // ENS resolution
+  // ENS resolution — own address
+  const { data: myEnsName } = useEnsName({
+    address,
+    chainId: mainnet.id,
+    query: { enabled: !!address },
+  });
+  const { data: myEnsAvatar } = useEnsAvatar({
+    name: myEnsName ?? undefined,
+    chainId: mainnet.id,
+    query: { enabled: !!myEnsName },
+  });
+
+  // ENS resolution — counterparty
   const isEnsName = addressInput.toLowerCase().endsWith(".eth") && addressInput.length > 4;
   const isRawAddress = addressInput.length === 42 && addressInput.startsWith("0x");
   const { data: ensAddress, isLoading: ensLoading } = useEnsAddress({
@@ -64,6 +103,13 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
     ? addressInput
     : "";
   const counterpartyValid = counterparty.length === 42 && counterparty.startsWith("0x");
+
+  const counterpartyEnsName = isEnsName ? addressInput : undefined;
+  const { data: counterpartyEnsAvatar } = useEnsAvatar({
+    name: counterpartyEnsName,
+    chainId: mainnet.id,
+    query: { enabled: !!counterpartyEnsName },
+  });
 
   // Fetch inventories
   const { tokens: myTokens, isLoading: myLoading, refetch: refetchMyInventory } = useInventory(address);
@@ -280,12 +326,23 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
         <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
           Trade Window
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 h-6">
           {busy && (
             <span className="text-[10px] text-muted-foreground animate-pulse">
               {STATUS_TEXT[status]}
             </span>
           )}
+          {(selectedMyToken !== undefined || selectedTheirToken !== undefined || status === "error") &&
+            !busy && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 px-2 text-[10px]"
+                onClick={handleReset}
+              >
+                Clear
+              </Button>
+            )}
           {selectedMyToken !== undefined &&
             selectedTheirToken !== undefined &&
             !busy && (
@@ -300,14 +357,20 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] border-b border-border shrink-0">
         {/* LEFT controls: your wallet */}
         <div className="p-3">
-          <div className="border border-border bg-background/50 p-2">
-            <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Your wallet
-            </label>
-            <div className="mt-1 h-7 flex items-center text-xs font-mono text-muted-foreground/80 px-1 truncate">
-              {address}
-            </div>
+          <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Your wallet
+          </label>
+          <div className="mt-1 h-7 flex items-center gap-2 border border-border bg-background px-2 text-xs font-mono truncate">
+            <AddressAvatar ensAvatar={myEnsAvatar} address={address} size={16} />
+            <span className="truncate">
+              {myEnsName ?? address}
+            </span>
           </div>
+          {myEnsName && (
+            <p className="mt-1 text-[10px] font-mono text-muted-foreground">
+              {`${address!.slice(0, 6)}...${address!.slice(-4)}`}
+            </p>
+          )}
         </div>
 
         {/* Center spacer */}
@@ -318,31 +381,34 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
 
         {/* RIGHT controls: counterparty selector */}
         <div className="p-3">
-          <div className="border border-border bg-background/50 p-2">
-            <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Trade with
-            </label>
-            <Input
-              type="text"
-              placeholder="0x... or name.eth"
-              value={addressInput}
-              onChange={(e) => {
-                setAddressInput(e.target.value);
-                setSelectedTheirToken(undefined);
-              }}
-              className="mt-1 h-7 text-xs font-mono"
-              disabled={busy}
-            />
-            {isEnsName && (
-              <p className="mt-1 text-[10px] font-mono text-muted-foreground">
-                {ensLoading
-                  ? "Resolving..."
-                  : ensAddress
-                  ? `→ ${ensAddress.slice(0, 6)}...${ensAddress.slice(-4)}`
-                  : "Could not resolve ENS name"}
-              </p>
-            )}
-          </div>
+          <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Trade with
+          </label>
+          <Input
+            type="text"
+            placeholder="0x... or name.eth"
+            value={addressInput}
+            onChange={(e) => {
+              setAddressInput(e.target.value);
+              setSelectedTheirToken(undefined);
+            }}
+            className="mt-1 h-7 text-xs font-mono"
+            disabled={busy}
+          />
+          {isEnsName && (
+            <div className="mt-1 flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
+              {ensLoading ? (
+                "Resolving..."
+              ) : ensAddress ? (
+                <>
+                  <AddressAvatar ensAvatar={counterpartyEnsAvatar} address={ensAddress} size={12} />
+                  <span>{`→ ${ensAddress.slice(0, 6)}...${ensAddress.slice(-4)}`}</span>
+                </>
+              ) : (
+                "Could not resolve ENS name"
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -455,18 +521,6 @@ export function TradePanel({ onTradeComplete }: { onTradeComplete?: (swap: SwapD
 
           {/* Actions */}
           <div className="flex items-center gap-2 shrink-0">
-            {(selectedMyToken !== undefined ||
-              selectedTheirToken !== undefined ||
-              status === "error") && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleReset}
-                disabled={busy}
-              >
-                Clear
-              </Button>
-            )}
             <div className="flex items-center border border-border bg-background/50 h-8 px-2 gap-1.5">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground whitespace-nowrap">
                 + ETH
