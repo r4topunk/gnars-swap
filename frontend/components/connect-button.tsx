@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { Button } from "@/components/ui/button";
@@ -8,13 +9,16 @@ export function ConnectButton() {
   const { address, isConnected, isConnecting, isReconnecting } = useAccount();
   const { connect, isPending: isConnectPending } = useConnect();
   const { disconnect } = useDisconnect();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const loading = isConnecting || isReconnecting || isConnectPending;
 
-  if (loading) {
+  if (!mounted || loading) {
     return (
       <Button variant="outline" size="sm" disabled>
-        Connecting...
+        {mounted ? "Connecting..." : "Connect Wallet"}
       </Button>
     );
   }

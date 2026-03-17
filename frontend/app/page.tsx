@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +58,12 @@ function TabContent({
 export default function Page() {
   const { isConnected } = useAccount();
   const { myProposals, incoming, history, isLoading, markSwap, addSwap, syncFromChain, totalSwaps } = useSwaps();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  // Prevent hydration mismatch — server always renders disconnected state
+  const connected = mounted && isConnected;
 
   return (
     <div className="mx-auto flex min-h-dvh md:h-dvh max-w-3xl flex-col px-4 py-6">
@@ -98,7 +105,7 @@ export default function Page() {
 
             <TabsContent value="inbox">
               <TabContent
-                isConnected={isConnected}
+                isConnected={connected}
                 isLoading={isLoading}
                 disconnectedMsg="Connect your wallet to see incoming swaps"
               >
@@ -112,7 +119,7 @@ export default function Page() {
 
             <TabsContent value="proposals">
               <TabContent
-                isConnected={isConnected}
+                isConnected={connected}
                 isLoading={isLoading}
                 disconnectedMsg="Connect your wallet to see your proposals"
               >
@@ -126,7 +133,7 @@ export default function Page() {
 
             <TabsContent value="history">
               <TabContent
-                isConnected={isConnected}
+                isConnected={connected}
                 isLoading={isLoading}
                 disconnectedMsg="Connect your wallet to see swap history"
               >

@@ -86,7 +86,10 @@ export function useInventory(ownerAddress?: string) {
       .then((found) => {
         if (!cancelled) setTokens(found);
       })
-      .catch(console.error)
+      .catch((err) => {
+        console.error("[use-inventory] Failed to fetch NFTs:", err);
+        console.error("[use-inventory] chainId:", chainId, "owner:", ownerAddress, "contract:", nftAddress);
+      })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
       });
